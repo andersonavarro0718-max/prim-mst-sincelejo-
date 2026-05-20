@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Prim vs Kruskal — MST Sincelejo</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0b1120;color:#e2e8f0;font-family:'Segoe UI',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  header{background:#111827;border-bottom:1px solid #1e3a5f;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+  header h1{font-size:16px;font-weight:700;color:#93c5fd}
+  header p{font-size:11px;color:#64748b;margin-top:2px}
+  .hbadges{display:flex;gap:8px}
+  .hbadge{font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid #1e3a5f;color:#67e8f9;background:rgba(6,182,212,.1)}
+  .hbadge.green{color:#6ee7b7;border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.1)}
+  .layout{display:flex;flex:1;overflow:hidden}
+  .graph-wrap{flex:1;position:relative;background:#0f172a}
+  #cvs{width:100%;height:100%;display:block}
+  .panel{width:330px;background:#111827;border-left:1px solid #1e3a5f;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+  .controls{padding:10px 12px;border-bottom:1px solid #1e3a5f;display:flex;gap:7px;flex-wrap:wrap}
+  .btn{font-size:11px;font-weight:600;padding:6px 12px;border-radius:7px;border:none;cursor:pointer;transition:.2s}
+  .btn-blue{background:#2563eb;color:#fff}
+  .btn-blue:hover{background:#1d4ed8}
+  .btn-blue:disabled{background:#1e3a5f;color:#475569;cursor:not-allowed}
+  .btn-gray{background:#1e293b;color:#94a3b8;border:1px solid #334155}
+  .btn-gray:hover{background:#273549}
+  .btn-green{background:#065f46;color:#6ee7b7;border:1px solid rgba(16,185,129,.4)}
+  .btn-green:hover{background:#047857}
+  .tabs{display:flex;background:#0f172a;border-bottom:1px solid #1e3a5f}
+  .tab{flex:1;padding:9px 0;text-align:center;font-size:10px;cursor:pointer;color:#64748b;border-bottom:2px solid transparent;transition:.2s}
+  .tab.active{color:#67e8f9;border-bottom-color:#67e8f9}
+  .tb{flex:1;overflow-y:auto;padding:12px;display:none}
+  .tb.active{display:block}
+  .log-item{padding:7px 0;border-bottom:1px solid #1e293b;animation:fi .3s ease}
+  @keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .log-step{font-size:9px;color:#475569;font-family:monospace}
+  .log-node{font-size:13px;font-weight:700;color:#93c5fd}
+  .log-name{font-size:10px;color:#64748b}
+  .log-cost{display:inline-block;margin-top:3px;font-size:10px;font-family:monospace;background:rgba(16,185,129,.12);color:#6ee7b7;padding:2px 7px;border-radius:4px}
+  table{width:100%;border-collapse:collapse;font-size:10px}
+  th{font-size:8px;color:#475569;text-align:left;padding:5px 5px;border-bottom:1px solid #1e3a5f;letter-spacing:1px;font-family:monospace}
+  td{padding:5px 5px;border-bottom:1px solid #1a2235;font-family:monospace;color:#94a3b8}
+  tr.hl td{background:rgba(59,130,246,.1);color:#93c5fd}
+  tr.khl td{background:rgba(16,185,129,.08);color:#6ee7b7}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
+  .stat{background:#1e293b;border-radius:8px;padding:9px}
+  .stat-l{font-size:8px;color:#475569;font-family:monospace;letter-spacing:1px}
+  .stat-v{font-size:18px;font-weight:700;color:#93c5fd;margin-top:2px}
+  .cmp-row{display:flex;gap:8px;margin-bottom:8px}
+  .cmp-card{flex:1;background:#1e293b;border-radius:8px;padding:10px;border:1px solid #1e3a5f}
+  .cmp-card.winner{border-color:rgba(16,185,129,.4)}
+  .cmp-title{font-size:9px;color:#64748b;font-family:monospace;letter-spacing:1px}
+  .cmp-val{font-size:20px;font-weight:700;margin-top:3px}
+  .cmp-sub{font-size:9px;color:#64748b;margin-top:2px}
+  .same-badge{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:#6ee7b7;font-size:10px;padding:5px 10px;border-radius:6px;text-align:center;margin-bottom:10px}
+  .legend{display:flex;gap:10px;padding:7px 12px;border-top:1px solid #1e3a5f;flex-wrap:wrap;flex-shrink:0}
+  .leg{display:flex;align-items:center;gap:4px;font-size:9px;color:#64748b}
+  .leg-dot{width:9px;height:9px;border-radius:50%}
+  ::-webkit-scrollbar{width:3px}
+  ::-webkit-scrollbar-thumb{background:#1e3a5f;border-radius:2px}
+  .empty{text-align:center;padding:24px 10px;color:#475569;font-size:11px}
+  .mode-btns{display:flex;gap:6px;margin-bottom:10px}
+  .mbtn{flex:1;font-size:10px;padding:5px 0;border-radius:6px;border:1px solid #1e3a5f;background:transparent;color:#64748b;cursor:pointer;transition:.2s;text-align:center}
+  .mbtn.active{background:#1e3a5f;color:#93c5fd;border-color:#3b82f6}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>🔗 MST — Red de Fibra Óptica de Sincelejo</h1>
+    <p>Prim (min-heap) + Kruskal (Union-Find) · 12 Nodos · 19 Aristas · Bloque B</p>
+  </div>
+  <div class="hbadges">
+    <span class="hbadge">Prim: <span id="hdr-prim">—</span> min</span>
+    <span class="hbadge">Kruskal: <span id="hdr-krus">—</span> min</span>
+    <span class="hbadge green" id="hdr-same" style="display:none">✔ Mismo resultado</span>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="graph-wrap"><canvas id="cvs"></canvas></div>
+
+  <div class="panel">
+    <div class="controls">
+      <button class="btn btn-blue"  id="btn-run">▶ Ejecutar Prim</button>
+      <button class="btn btn-gray"  id="btn-step" disabled>Paso a paso</button>
+      <button class="btn btn-green" id="btn-krus" disabled>Mostrar Kruskal</button>
+      <button class="btn btn-gray"  id="btn-reset">↺ Reset</button>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="tab('log')">Pasos</div>
+      <div class="tab" onclick="tab('parent')">parent[]</div>
+      <div class="tab" onclick="tab('cmp')">Prim vs Kruskal</div>
+    </div>
+
+    <div class="tb active" id="tb-log">
+      <div class="empty" id="log-empty">Presiona <b>Ejecutar Prim</b><br>para ver los pasos</div>
+      <div id="log-list"></div>
+    </div>
+
+    <div class="tb" id="tb-parent">
+      <div class="stats">
+        <div class="stat"><div class="stat-l">NODOS</div><div class="stat-v">12</div></div>
+        <div class="stat"><div class="stat-l">ARISTAS MST</div><div class="stat-v" id="s-aristas">—</div></div>
+        <div class="stat"><div class="stat-l">COSTO PRIM</div><div class="stat-v" id="s-prim">—</div></div>
+        <div class="stat"><div class="stat-l">NODO INICIO</div><div class="stat-v">N01</div></div>
+      </div>
+      <table>
+        <thead><tr><th>NODO</th><th>NOMBRE</th><th>parent[v]</th><th>key</th></tr></thead>
+        <tbody id="tbl-body"></tbody>
+      </table>
+    </div>
+
+    <div class="tb" id="tb-cmp">
+      <div class="empty" id="cmp-empty">Ejecuta ambos algoritmos<br>para ver la comparativa</div>
+      <div id="cmp-content" style="display:none">
+        <div class="same-badge" id="same-badge"></div>
+        <div style="font-size:9px;color:#475569;font-family:monospace;letter-spacing:1px;margin-bottom:6px">COSTO MST</div>
+        <div class="cmp-row">
+          <div class="cmp-card" id="card-prim-cost">
+            <div class="cmp-title">PRIM</div>
+            <div class="cmp-val" id="v-prim-cost" style="color:#93c5fd">—</div>
+            <div class="cmp-sub">minutos</div>
+          </div>
+          <div class="cmp-card" id="card-krus-cost">
+            <div class="cmp-title">KRUSKAL</div>
+            <div class="cmp-val" id="v-krus-cost" style="color:#6ee7b7">—</div>
+            <div class="cmp-sub">minutos</div>
+          </div>
+        </div>
+        <div style="font-size:9px;color:#475569;font-family:monospace;letter-spacing:1px;margin-bottom:6px">TIEMPO DE EJECUCIÓN</div>
+        <div class="cmp-row">
+          <div class="cmp-card" id="card-prim-t">
+            <div class="cmp-title">PRIM</div>
+            <div class="cmp-val" id="v-prim-t" style="color:#93c5fd;font-size:13px">—</div>
+            <div class="cmp-sub">segundos</div>
+          </div>
+          <div class="cmp-card" id="card-krus-t">
+            <div class="cmp-title">KRUSKAL</div>
+            <div class="cmp-val" id="v-krus-t" style="color:#6ee7b7;font-size:13px">—</div>
+            <div class="cmp-sub">segundos</div>
+          </div>
+        </div>
+        <div style="font-size:9px;color:#475569;font-family:monospace;letter-spacing:1px;margin-bottom:6px">ARISTAS DEL MST</div>
+        <div class="mode-btns">
+          <div class="mbtn active" onclick="showMstTable('prim')">Prim</div>
+          <div class="mbtn" onclick="showMstTable('krus')">Kruskal</div>
+        </div>
+        <table>
+          <thead><tr><th>ARISTA</th><th>PESO</th><th>DESCRIPCIÓN</th></tr></thead>
+          <tbody id="mst-tbl"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:#3b82f6"></div>Prim MST</div>
+      <div class="leg"><div class="leg-dot" style="background:#f59e0b"></div>Actual</div>
+      <div class="leg"><div style="width:16px;height:2px;background:#10b981;border-radius:1px"></div>Arista Prim</div>
+      <div class="leg"><div style="width:16px;height:2px;background:#a855f7;border-radius:1px"></div>Arista Kruskal</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const NODES  = {"N00": {"name": "UAJS Sede E", "x": 380, "y": 55}, "N01": {"name": "UAJS Sede C", "x": 560, "y": 110}, "N02": {"name": "UNISUCRE", "x": 140, "y": 115}, "N03": {"name": "CECAR", "x": 80, "y": 265}, "N04": {"name": "IPS SEYSA", "x": 590, "y": 230}, "N05": {"name": "Clinica Las Americas", "x": 280, "y": 135}, "N06": {"name": "Terminal de Transporte", "x": 480, "y": 395}, "N07": {"name": "Mercado de Sincelejo", "x": 610, "y": 345}, "N08": {"name": "Av. Alfonso Lopez", "x": 445, "y": 175}, "N09": {"name": "Parque Santander", "x": 345, "y": 295}, "N10": {"name": "Calle 30 / Troncal", "x": 200, "y": 365}, "N11": {"name": "Barrio Puerta Roja", "x": 80, "y": 165}};
+const EDGES  = [{"from": "N00", "to": "N01", "w": 8}, {"from": "N00", "to": "N05", "w": 12}, {"from": "N00", "to": "N08", "w": 6}, {"from": "N01", "to": "N04", "w": 5}, {"from": "N01", "to": "N08", "w": 4}, {"from": "N01", "to": "N10", "w": 10}, {"from": "N02", "to": "N05", "w": 9}, {"from": "N02", "to": "N09", "w": 7}, {"from": "N02", "to": "N11", "w": 4}, {"from": "N03", "to": "N10", "w": 12}, {"from": "N03", "to": "N06", "w": 18}, {"from": "N04", "to": "N07", "w": 6}, {"from": "N04", "to": "N09", "w": 8}, {"from": "N05", "to": "N09", "w": 10}, {"from": "N06", "to": "N09", "w": 11}, {"from": "N06", "to": "N07", "w": 8}, {"from": "N07", "to": "N09", "w": 5}, {"from": "N08", "to": "N10", "w": 7}, {"from": "N10", "to": "N06", "w": 14}];
+const MST_P  = [{"from": "N08", "to": "N00", "w": 6}, {"from": "N09", "to": "N02", "w": 7}, {"from": "N10", "to": "N03", "w": 12}, {"from": "N01", "to": "N04", "w": 5}, {"from": "N02", "to": "N05", "w": 9}, {"from": "N07", "to": "N06", "w": 8}, {"from": "N04", "to": "N07", "w": 6}, {"from": "N01", "to": "N08", "w": 4}, {"from": "N07", "to": "N09", "w": 5}, {"from": "N08", "to": "N10", "w": 7}, {"from": "N02", "to": "N11", "w": 4}];
+const MST_K  = [{"from": "N01", "to": "N08", "w": 4}, {"from": "N02", "to": "N11", "w": 4}, {"from": "N01", "to": "N04", "w": 5}, {"from": "N07", "to": "N09", "w": 5}, {"from": "N00", "to": "N08", "w": 6}, {"from": "N04", "to": "N07", "w": 6}, {"from": "N02", "to": "N09", "w": 7}, {"from": "N08", "to": "N10", "w": 7}, {"from": "N06", "to": "N07", "w": 8}, {"from": "N02", "to": "N05", "w": 9}, {"from": "N03", "to": "N10", "w": 12}];
+const ORDEN  = [{"node": "N01", "cost": 0, "from": null}, {"node": "N08", "cost": 4, "from": "N01"}, {"node": "N04", "cost": 5, "from": "N01"}, {"node": "N00", "cost": 6, "from": "N08"}, {"node": "N07", "cost": 6, "from": "N04"}, {"node": "N09", "cost": 5, "from": "N07"}, {"node": "N02", "cost": 7, "from": "N09"}, {"node": "N11", "cost": 4, "from": "N02"}, {"node": "N10", "cost": 7, "from": "N08"}, {"node": "N06", "cost": 8, "from": "N07"}, {"node": "N05", "cost": 9, "from": "N02"}, {"node": "N03", "cost": 12, "from": "N10"}];
+const PARENT = {"N00": "N08", "N01": null, "N02": "N09", "N03": "N10", "N04": "N01", "N05": "N02", "N06": "N07", "N07": "N04", "N08": "N01", "N09": "N07", "N10": "N08", "N11": "N02"};
+const KEY    = {"N00": 6, "N01": 0, "N02": 7, "N03": 12, "N04": 5, "N05": 9, "N06": 8, "N07": 6, "N08": 4, "N09": 5, "N10": 7, "N11": 4};
+const KRUS_S = [["N01", "N08", 4], ["N02", "N11", 4], ["N01", "N04", 5], ["N07", "N09", 5], ["N00", "N08", 6], ["N04", "N07", 6], ["N02", "N09", 7], ["N08", "N10", 7], ["N06", "N07", 8], ["N02", "N05", 9], ["N03", "N10", 12]];
+const COSTO  = 73;
+const T_PRIM = 2.889998722821474e-05;
+const T_KRUS = 3.579998156055808e-05;
+const IDS    = Object.keys(NODES);
+
+const cvs = document.getElementById('cvs');
+const ctx = cvs.getContext('2d');
+let W, H;
+
+function resize(){ W=cvs.width=cvs.offsetWidth; H=cvs.height=cvs.offsetHeight; draw(); }
+window.addEventListener('resize', resize);
+
+const state   = {};
+const mstSet  = new Set();
+let krusVis   = false;
+let stepIdx   = 0, done = false, timer = null;
+
+IDS.forEach(id => state[id]='default');
+
+function nx(id){ return NODES[id].x*(W/740); }
+function ny(id){ return NODES[id].y*(H/500); }
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  // grid
+  ctx.strokeStyle='rgba(30,58,95,0.25)'; ctx.lineWidth=0.5;
+  for(let x=0;x<W;x+=50){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke(); }
+  for(let y=0;y<H;y+=50){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke(); }
+
+  // aristas base
+  EDGES.forEach(e=>{
+    ctx.beginPath(); ctx.moveTo(nx(e.from),ny(e.from)); ctx.lineTo(nx(e.to),ny(e.to));
+    ctx.strokeStyle='rgba(71,85,105,0.3)'; ctx.lineWidth=1.2; ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='rgba(100,116,139,0.55)'; ctx.font='bold 8px monospace'; ctx.textAlign='center';
+    ctx.fillText(e.w,(nx(e.from)+nx(e.to))/2,(ny(e.from)+ny(e.to))/2-4);
+  });
+
+  // aristas Kruskal (púrpura) si visible
+  if(krusVis){
+    MST_K.forEach(e=>{
+      ctx.beginPath(); ctx.moveTo(nx(e.from),ny(e.from)); ctx.lineTo(nx(e.to),ny(e.to));
+      ctx.strokeStyle='rgba(168,85,247,0.7)'; ctx.lineWidth=2.5; ctx.stroke();
+    });
+  }
+
+  // aristas Prim (verde)
+  mstSet.forEach(k=>{
+    const [a,b,w]=k.split('|');
+    ctx.beginPath(); ctx.moveTo(nx(a),ny(a)); ctx.lineTo(nx(b),ny(b));
+    ctx.strokeStyle='#10b981'; ctx.lineWidth=3; ctx.stroke();
+    ctx.fillStyle='#6ee7b7'; ctx.font='bold 9px monospace'; ctx.textAlign='center';
+    ctx.fillText(w+'m',(nx(a)+nx(b))/2,(ny(a)+ny(b))/2-6);
+  });
+
+  // nodos
+  IDS.forEach(id=>{
+    const x=nx(id),y=ny(id),st=state[id];
+    let fill='#1e293b',stroke='#475569',sw=1.5,tc='#94a3b8';
+    if(st==='visited'){fill='#1e3a5f';stroke='#3b82f6';sw=2.5;tc='#93c5fd';}
+    if(st==='current'){fill='#451a03';stroke='#f59e0b';sw=3;tc='#fcd34d';}
+    if(st==='kruskal'){fill='#2e1065';stroke='#a855f7';sw=2.5;tc='#d8b4fe';}
+    if(st==='current'){ctx.shadowColor='#f59e0b';ctx.shadowBlur=16;}
+    ctx.beginPath(); ctx.arc(x,y,18,0,Math.PI*2);
+    ctx.fillStyle=fill; ctx.fill(); ctx.strokeStyle=stroke; ctx.lineWidth=sw; ctx.stroke();
+    ctx.shadowBlur=0;
+    ctx.fillStyle=tc; ctx.font='bold 9px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(id,x,y);
+    const words=NODES[id].name.split(' ');
+    ctx.fillStyle='rgba(148,163,184,0.6)'; ctx.font='7px Segoe UI';
+    words.slice(0,2).forEach((w,i)=>ctx.fillText(w,x,y+26+(i*9)));
+    ctx.textBaseline='alphabetic';
+  });
+}
+
+function applyStep(i){
+  const s=ORDEN[i];
+  if(i>0) state[ORDEN[i-1].node]='visited';
+  state[s.node]='current';
+  if(s.from) mstSet.add(`${s.from}|${s.node}|${s.cost}`);
+  document.getElementById('log-empty').style.display='none';
+  const div=document.createElement('div'); div.className='log-item';
+  div.innerHTML=`<div class="log-step">Paso ${i+1} / ${ORDEN.length}</div>
+    <div class="log-node">${s.node}</div><div class="log-name">${NODES[s.node].name}</div>
+    <span class="log-cost">${s.from?s.from+' → '+s.node+' · '+s.cost+' min':'Nodo raíz · 0 min'}</span>`;
+  const list=document.getElementById('log-list');
+  list.appendChild(div); list.lastChild.scrollIntoView({behavior:'smooth',block:'end'});
+  draw();
+}
+
+function finish(){
+  state[ORDEN[ORDEN.length-1].node]='visited';
+  // header
+  document.getElementById('hdr-prim').textContent=COSTO;
+  document.getElementById('hdr-krus').textContent=COSTO;
+  document.getElementById('hdr-same').style.display='';
+  // stats parent tab
+  document.getElementById('s-aristas').textContent=ORDEN.length-1;
+  document.getElementById('s-prim').textContent=COSTO+' min';
+  // tabla parent
+  const tbody=document.getElementById('tbl-body'); tbody.innerHTML='';
+  IDS.slice().sort().forEach(id=>{
+    const p=PARENT[id],k=KEY[id];
+    const tr=document.createElement('tr'); if(p) tr.classList.add('hl');
+    tr.innerHTML=`<td>${id}</td><td style="font-size:8px;color:#64748b">${NODES[id].name}</td><td>${p||'null'}</td><td>${k>=0?k+' min':'∞'}</td>`;
+    tbody.appendChild(tr);
+  });
+  // comparativa
+  document.getElementById('cmp-empty').style.display='none';
+  document.getElementById('cmp-content').style.display='block';
+  document.getElementById('same-badge').textContent='✔ Prim y Kruskal obtienen el mismo costo: '+COSTO+' min';
+  document.getElementById('v-prim-cost').textContent=COSTO;
+  document.getElementById('v-krus-cost').textContent=COSTO;
+  document.getElementById('v-prim-t').textContent=T_PRIM.toFixed(8);
+  document.getElementById('v-krus-t').textContent=T_KRUS.toFixed(8);
+  // marcar ganador de tiempo
+  if(T_PRIM<T_KRUS) document.getElementById('card-prim-t').classList.add('winner');
+  else document.getElementById('card-krus-t').classList.add('winner');
+  showMstTable('prim');
+  // habilitar Kruskal
+  document.getElementById('btn-krus').disabled=false;
+  document.getElementById('btn-run').disabled=true;
+  document.getElementById('btn-step').disabled=true;
+  draw();
+}
+
+function showMstTable(which){
+  document.querySelectorAll('.mbtn').forEach((b,i)=>b.classList.toggle('active',['prim','krus'][i]===which));
+  const tbody=document.getElementById('mst-tbl'); tbody.innerHTML='';
+  const data = which==='prim' ? MST_P : KRUS_S;
+  data.forEach(e=>{
+    const a=e.from||e[0], b=e.to||e[1], w=e.w||e[2];
+    const tr=document.createElement('tr'); tr.classList.add(which==='prim'?'hl':'khl');
+    tr.innerHTML=`<td>${a} → ${b}</td><td>${w} min</td><td style="font-size:8px;color:#64748b">${NODES[a].name} → ${NODES[b].name}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById('btn-run').addEventListener('click',()=>{
+  resetAll(); done=true; stepIdx=0;
+  document.getElementById('btn-run').disabled=true;
+  document.getElementById('btn-step').disabled=false;
+  timer=setInterval(()=>{
+    if(stepIdx>=ORDEN.length){clearInterval(timer);finish();return;}
+    applyStep(stepIdx++);
+  },700);
+});
+
+document.getElementById('btn-step').addEventListener('click',()=>{
+  if(!done) return; clearInterval(timer);
+  if(stepIdx<ORDEN.length) applyStep(stepIdx++); else finish();
+});
+
+document.getElementById('btn-krus').addEventListener('click',()=>{
+  krusVis=!krusVis;
+  document.getElementById('btn-krus').textContent=krusVis?'Ocultar Kruskal':'Mostrar Kruskal';
+  if(krusVis) IDS.forEach(id=>{ if(state[id]==='visited') state[id]='kruskal'; });
+  else IDS.forEach(id=>{ if(state[id]==='kruskal') state[id]='visited'; });
+  draw();
+});
+
+document.getElementById('btn-reset').addEventListener('click',resetAll);
+
+function resetAll(){
+  clearInterval(timer); stepIdx=0; done=false; krusVis=false;
+  mstSet.clear(); IDS.forEach(id=>state[id]='default');
+  document.getElementById('log-list').innerHTML='';
+  document.getElementById('log-empty').style.display='block';
+  document.getElementById('tbl-body').innerHTML='';
+  document.getElementById('s-aristas').textContent='—';
+  document.getElementById('s-prim').textContent='—';
+  document.getElementById('hdr-prim').textContent='—';
+  document.getElementById('hdr-krus').textContent='—';
+  document.getElementById('hdr-same').style.display='none';
+  document.getElementById('cmp-empty').style.display='block';
+  document.getElementById('cmp-content').style.display='none';
+  document.getElementById('btn-run').disabled=false;
+  document.getElementById('btn-step').disabled=true;
+  document.getElementById('btn-krus').disabled=true;
+  document.getElementById('btn-krus').textContent='Mostrar Kruskal';
+  draw();
+}
+
+function tab(name){
+  const names=['log','parent','cmp'];
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',names[i]===name));
+  document.querySelectorAll('.tb').forEach(b=>b.classList.toggle('active',b.id==='tb-'+name));
+}
+
+resize();
+</script>
+</body>
+</html>
